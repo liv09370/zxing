@@ -32,6 +32,76 @@ module ZXing
 
   # Load version information
   require 'zxing/version'
+  
+  # 确保动态库正确加载
+  def self.ensure_extension_loaded
+    # 检查是否存在动态库文件
+    ext_paths = [
+      File.join(File.dirname(__FILE__), 'zxing', 'zxing.so'),
+      File.join(File.dirname(__FILE__), 'zxing', 'zxing.bundle'),
+      File.join(File.dirname(__FILE__), 'zxing', 'zxing.dll')
+    ]
+    
+    existing_ext = ext_paths.find { |path| File.exist?(path) }
+    
+    if existing_ext
+      puts "✅ 找到动态库: #{existing_ext}" if $DEBUG
+      return true
+    else
+      puts "❌ 未找到编译的动态库文件"
+      puts "🔧 尝试自动编译..."
+      
+      # 尝试自动编译
+      if try_compile_extension
+        # 重新检查
+        existing_ext = ext_paths.find { |path| File.exist?(path) }
+        if existing_ext
+          puts "✅ 自动编译成功: #{existing_ext}"
+          return true
+        end
+      end
+      
+      puts "❌ 自动编译失败"
+      puts "💡 请手动运行: bundle exec rake compile"
+      raise LoadError, "ZXing 动态库未编译或未找到"
+    end
+  end
+  
+  def self.try_compile_extension
+    # 查找扩展目录
+    gem_root = File.expand_path('..', File.dirname(__FILE__))
+    ext_dir = File.join(gem_root, 'ext', 'zxing')
+    
+    return false unless File.exist?(ext_dir)
+    
+    puts "📁 扩展目录: #{ext_dir}"
+    
+    Dir.chdir(ext_dir) do
+      # 运行 extconf.rb
+      puts "🔧 运行 extconf.rb..."
+      return false unless system('ruby extconf.rb > /dev/null 2>&1')
+      
+      # 编译
+      puts "🔨 编译扩展..."
+      return false unless system('make > /dev/null 2>&1')
+      
+      # 复制到 lib 目录
+      so_file = Dir.glob('zxing.{so,bundle}').first
+      if so_file
+        lib_dir = File.join(gem_root, 'lib', 'zxing')
+        require 'fileutils'
+        FileUtils.mkdir_p(lib_dir)
+        FileUtils.cp(so_file, lib_dir)
+        puts "✅ 扩展编译成功"
+        return true
+      end
+    end
+    
+    false
+  end
+  
+  # 在模块加载时确保扩展可用
+  ensure_extension_loaded
 
   def decode *args
     begin

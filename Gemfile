@@ -1,3 +1,10 @@
 source 'https://rubygems.org'
 
-gem 'zxing_cpp', git: 'https://github.com/liv09370/zxing.git'
+# 从 gemspec 加载依赖
+gemspec
+
+# 开发和测试用的额外 gems
+group :development, :test do
+  gem 'rake'
+  gem 'rake-compiler'
+end

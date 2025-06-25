@@ -4,7 +4,7 @@ require 'mkmf'
 ZXING_CPP = "#{File.dirname(__FILE__)}/zxing-cpp"
 ZXING_CPP_BUILD = "#{ZXING_CPP}/build"
 
-puts "🔧 配置 ZXing-C++ Ruby 扩展..."
+puts "🔧 配置 ZXing-C++ 动态库..."
 
 # 检查 zxing-cpp 源代码是否存在
 unless File.exist?("#{ZXING_CPP}/core/src/ReadBarcode.h")
@@ -115,6 +115,39 @@ if Dir["/usr/lib*/libiconv.*"].size > 0 || Dir["/usr/local/lib/libiconv.*"].size
   puts "✅ 添加 iconv 库支持"
 end
 
+# 设置构建为动态库
+$LDSHARED = "#{CONFIG['CXX']} -shared"
+
 puts "🎯 生成 Makefile..."
-create_makefile 'zxing/zxing'
-puts "✅ extconf.rb 配置完成！"
+
+# 创建自定义 Makefile 来构建动态库而不是 Ruby 扩展
+makefile_content = <<-EOF
+SHELL = /bin/sh
+CXX = #{CONFIG['CXX']}
+CXXFLAGS = #{CONFIG['CXXFLAGS']} #{$CPPFLAGS} -fPIC
+LDFLAGS = #{$DLDFLAGS}
+LDSHARED = #{$LDSHARED}
+
+TARGET = zxing.so
+OBJS = zxing.o
+
+all: $(TARGET)
+
+$(TARGET): $(OBJS)
+	$(LDSHARED) $(OBJS) $(LDFLAGS) -o $(TARGET)
+
+zxing.o: zxing.cc
+	$(CXX) $(CXXFLAGS) -c zxing.cc -o zxing.o
+
+clean:
+	rm -f $(OBJS) $(TARGET)
+
+install: $(TARGET)
+	# 动态库构建完成
+
+.PHONY: all clean install
+EOF
+
+File.open('Makefile', 'w') { |f| f.write(makefile_content) }
+
+puts "✅ 动态库 Makefile 生成完成！"
