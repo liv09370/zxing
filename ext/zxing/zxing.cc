@@ -1,224 +1,218 @@
 // -*- c-basic-offset:2 -*-
 
-#include <zxing/Reader.h>
-#include <zxing/MultiFormatReader.h>
-#include <zxing/datamatrix/DataMatrixReader.h>
-#include <zxing/aztec/AztecReader.h>
-#include <zxing/oned/Code39Reader.h>
-#include <zxing/common/GreyscaleLuminanceSource.h>
-#include <zxing/common/HybridBinarizer.h>
-#include <zxing/FormatException.h>
-#include <zxing/ReaderException.h>
-#include <zxing/ChecksumException.h>
-#include <zxing/common/reedsolomon/ReedSolomonException.h>
-#include <zxing/common/IllegalArgumentException.h>
-#include <zxing/common/Str.h>
+#include "ReadBarcode.h"
+#include "ImageView.h"
+#include "Barcode.h"
+#include "BarcodeFormat.h"
+#include "ReaderOptions.h"
+#include "Error.h"
 
 #include <stdlib.h>
 #include <stdint.h>
+#include <string.h>
+#include <stdexcept>
 
-using namespace std;
+using namespace ZXing;
 
 extern "C" {
-  void Reader_delete(void* reader_ptr) {
-    zxing::Ref<zxing::Reader>* ref = (zxing::Ref<zxing::Reader>*)reader_ptr;
-    delete ref;
-  }
-
-  void* new_exception_data(const char* className, std::exception const& e) {
+  
+  // 错误处理
+  void* new_exception_data(const char* className, const char* message) {
     void** exception = (void**)malloc(sizeof(void*)*2);
     exception[0] = (void*)className;
-    size_t size = strlen(e.what())+1;
+    size_t size = strlen(message)+1;
     exception[1] = malloc(size);
-    memcpy(exception[1], e.what(), size);
+    memcpy(exception[1], message, size);
     return (void*)((uintptr_t)exception | 1);
   }
 
-  void* Reader_decode(
-    void* reader_ref_ptr,
-    void* bitmap_ref_ptr,
-    void* hints_ptr) {
-
-    zxing::Ref<zxing::Reader>* reader =
-      (zxing::Ref<zxing::Reader>*)reader_ref_ptr;
-    zxing::Ref<zxing::BinaryBitmap>* bitmap = 
-      (zxing::Ref<zxing::BinaryBitmap>*)bitmap_ref_ptr;
-    zxing::DecodeHints* hints = (zxing::DecodeHints*)hints_ptr;
+  // 解码函数 - 新版本使用 ReadBarcode 函数
+  void* decode_barcode(
+    const unsigned char* data,
+    int width,
+    int height,
+    ImageFormat format,
+    bool tryHarder,
+    bool tryRotate,
+    bool tryInvert) {
+    
     void* result = 0;
     try {
-      zxing::Ref<zxing::Result> decoded ((*reader)->decode(*bitmap, *hints));
-      result = new zxing::Ref<zxing::Result>(decoded);
-    } catch(zxing::IllegalArgumentException const& e) {
-      result = new_exception_data("zxing::IllegalArgumentException", e);
-    } catch(zxing::ReedSolomonException const& e) {
-      result = new_exception_data("zxing::ReedSolomonException", e);
-    } catch(zxing::FormatException const& e) {
-      result = new_exception_data("zxing::FormatException", e);
-    } catch(zxing::ChecksumException const& e) {
-      result = new_exception_data("zxing::ChecksumException", e);
-    } catch(zxing::ReaderException const& e) {
-      result = new_exception_data("zxing::ReaderException", e);
-    } catch(zxing::Exception const& e) {
-      result = new_exception_data("zxing::Exception", e);
+      ImageView image(data, width, height, format);
+      ReaderOptions options;
+      options.setTryHarder(tryHarder);
+      options.setTryRotate(tryRotate);
+      options.setTryInvert(tryInvert);
+      
+      Barcode barcode = ReadBarcode(image, options);
+      
+      if (barcode.isValid()) {
+        result = new Barcode(std::move(barcode));
+      } else {
+        result = new_exception_data("ZXing::Error", barcode.error().msg().c_str());
+      }
+    } catch(const std::exception& e) {
+      result = new_exception_data("std::exception", e.what());
     } catch(...) {
-      result = new_exception_data("...", std::exception());
+      result = new_exception_data("unknown", "Unknown error occurred");
     }
     return result;
   }
 
-  void* MultiFormatReader_new() {
-    zxing::MultiFormatReader* reader = new zxing::MultiFormatReader();
-    return new zxing::Ref<zxing::Reader>(reader);
-  }
-
-  void* DataMatrixReader_new() {
-    zxing::datamatrix::DataMatrixReader* reader = new zxing::datamatrix::DataMatrixReader();
-    return new zxing::Ref<zxing::Reader>(reader);
-  }
-
-  void* AztecReader_new() {
-    zxing::aztec::AztecReader* reader = new zxing::aztec::AztecReader();
-    return new zxing::Ref<zxing::Reader>(reader);
-  }
-
-  void* Code39Reader_new(bool usingCheckDigit, bool extendedMode) {
-    zxing::oned::Code39Reader* reader =
-      new zxing::oned::Code39Reader(usingCheckDigit, extendedMode);
-    return new zxing::Ref<zxing::Reader>(reader);
-  }
-
-  void LuminanceSource_delete(void* source_ptr) {
-    zxing::Ref<zxing::LuminanceSource>* ref = (zxing::Ref<zxing::LuminanceSource>*)source_ptr;
-    delete ref;
-  }
-
-  int LuminanceSource_width(void* source_ptr) {
-    zxing::Ref<zxing::LuminanceSource>* ref = (zxing::Ref<zxing::LuminanceSource>*)source_ptr;
-    return (*ref)->getWidth();
-  }
-
-  int LuminanceSource_height(void* source_ptr) {
-    zxing::Ref<zxing::LuminanceSource>* ref = (zxing::Ref<zxing::LuminanceSource>*)source_ptr;
-    return (*ref)->getHeight();
-  }
-
-  void* LuminanceSource_matrix(void* source_ptr) {
-    zxing::Ref<zxing::LuminanceSource>* ref = (zxing::Ref<zxing::LuminanceSource>*)source_ptr;
-    return &(*ref)->getMatrix()[0];
-  }
-
-  void* GreyscaleLuminanceSource_new(
-    char* greyData,
-    int dataWidth,
-    int dataHeight,
-    int left,
-    int top,
+  // 解码多个条码
+  void* decode_barcodes(
+    const unsigned char* data,
     int width,
-    int height) {
-    zxing::GreyscaleLuminanceSource* source =
-      new zxing::GreyscaleLuminanceSource(
-        zxing::ArrayRef<char>(greyData, dataWidth*dataHeight),
-        dataWidth,
-        dataHeight,
-        left,
-        top,
-        width,
-        height);
-    return new zxing::Ref<zxing::LuminanceSource>(source);
+    int height,
+    ImageFormat format,
+    bool tryHarder,
+    bool tryRotate,
+    bool tryInvert) {
+    
+    void* result = 0;
+    try {
+      ImageView image(data, width, height, format);
+      ReaderOptions options;
+      options.setTryHarder(tryHarder);
+      options.setTryRotate(tryRotate);
+      options.setTryInvert(tryInvert);
+      
+      Barcodes barcodes = ReadBarcodes(image, options);
+      result = new Barcodes(std::move(barcodes));
+    } catch(const std::exception& e) {
+      result = new_exception_data("std::exception", e.what());
+    } catch(...) {
+      result = new_exception_data("unknown", "Unknown error occurred");
+    }
+    return result;
   }
 
-  void Binarizer_delete(void* binarizer_ptr) {
-    zxing::Ref<zxing::Binarizer>* ref = (zxing::Ref<zxing::Binarizer>*)binarizer_ptr;
-    delete ref;
+  // Barcode 结果处理
+  void Barcode_delete(void* barcode_ptr) {
+    Barcode* barcode = (Barcode*)barcode_ptr;
+    delete barcode;
   }
 
-  void* Binarizer_black_matrix(void* binarizer_ptr) {
-    zxing::Ref<zxing::Binarizer>* ref = (zxing::Ref<zxing::Binarizer>*)binarizer_ptr;
-    return new zxing::Ref<zxing::BitMatrix>((*ref)->getBlackMatrix());
+  bool Barcode_isValid(void* barcode_ptr) {
+    Barcode* barcode = (Barcode*)barcode_ptr;
+    return barcode->isValid();
   }
 
-  void* BinaryBitmap_black_matrix(void* ref_ptr) {
-    zxing::Ref<zxing::BinaryBitmap>* ref = (zxing::Ref<zxing::BinaryBitmap>*)ref_ptr;
-    return new zxing::Ref<zxing::BitMatrix>((*ref)->getBlackMatrix());
+  int Barcode_format(void* barcode_ptr) {
+    Barcode* barcode = (Barcode*)barcode_ptr;
+    return static_cast<int>(barcode->format());
   }
 
-  bool BitMatrix_get(void* ref_ptr, int x, int y) {
-    zxing::Ref<zxing::BitMatrix>* ref = (zxing::Ref<zxing::BitMatrix>*)ref_ptr;
-    return (*ref)->get(x, y);
+  char* Barcode_text(void* barcode_ptr) {
+    Barcode* barcode = (Barcode*)barcode_ptr;
+    std::string text = barcode->text();
+    char* result = (char*)malloc(text.length() + 1);
+    strcpy(result, text.c_str());
+    return result;
   }
 
-  void* HybridBinarizer_new(zxing::Ref<zxing::LuminanceSource>* luminance_source) {
-    zxing::HybridBinarizer* binarizer = new zxing::HybridBinarizer(*luminance_source);
-    return new zxing::Ref<zxing::Binarizer>(binarizer);
+  char* Barcode_formatName(void* barcode_ptr) {
+    Barcode* barcode = (Barcode*)barcode_ptr;
+    std::string name = ToString(barcode->format());
+    char* result = (char*)malloc(name.length() + 1);
+    strcpy(result, name.c_str());
+    return result;
   }
 
-  void* BinaryBitmap_new(zxing::Ref<zxing::Binarizer>* binarizer) {
-    zxing::BinaryBitmap* bitmap = new zxing::BinaryBitmap(*binarizer);
-    return new zxing::Ref<zxing::BinaryBitmap>(bitmap);
+  char* Barcode_error(void* barcode_ptr) {
+    Barcode* barcode = (Barcode*)barcode_ptr;
+    std::string error = barcode->error().msg();
+    char* result = (char*)malloc(error.length() + 1);
+    strcpy(result, error.c_str());
+    return result;
   }
 
-  int BinaryBitmap_count(void* bitmap_ptr) {
-    zxing::Ref<zxing::BinaryBitmap>* ref = (zxing::Ref<zxing::BinaryBitmap>*)bitmap_ptr;
-    return (*ref)->count();
+  // Barcodes 集合处理
+  void Barcodes_delete(void* barcodes_ptr) {
+    Barcodes* barcodes = (Barcodes*)barcodes_ptr;
+    delete barcodes;
   }
 
-  void BinaryBitmap_delete(void* bitmap_ptr) {
-    zxing::Ref<zxing::BinaryBitmap>* ref = (zxing::Ref<zxing::BinaryBitmap>*)bitmap_ptr;
-    delete ref;
+  int Barcodes_size(void* barcodes_ptr) {
+    Barcodes* barcodes = (Barcodes*)barcodes_ptr;
+    return barcodes->size();
   }
 
-  void* DecodeHints_new(int value) {
-    return new zxing::DecodeHints(value);
+  void* Barcodes_at(void* barcodes_ptr, int index) {
+    Barcodes* barcodes = (Barcodes*)barcodes_ptr;
+    if (index >= 0 && index < barcodes->size()) {
+      return new Barcode((*barcodes)[index]);
+    }
+    return nullptr;
   }
 
-  void* DecodeHints_default() {
-    return new zxing::DecodeHints(zxing::DecodeHints::DEFAULT_HINT);
+  // 内存清理
+  void free_string(char* str) {
+    if (str) {
+      free(str);
+    }
   }
 
-  void DecodeHints_delete(void* hints_ptr) {
-    zxing::DecodeHints* hints  = (zxing::DecodeHints*)hints_ptr;
-    delete hints;
+  // ImageFormat 枚举值
+  int ImageFormat_Lum() {
+    return static_cast<int>(ImageFormat::Lum);
   }
 
-  void DecodeHints_setTryHarder(void* hints_ptr, bool value) {
-    zxing::DecodeHints* hints  = (zxing::DecodeHints*)hints_ptr;
-    hints->setTryHarder(value);
+  int ImageFormat_RGB() {
+    return static_cast<int>(ImageFormat::RGB);
   }
 
-  void DecodeHints_setDataMatrix(void* hints_ptr, bool) {
-    zxing::DecodeHints* hints  = (zxing::DecodeHints*)hints_ptr;
-    hints->addFormat(zxing::BarcodeFormat::DATA_MATRIX);
+  int ImageFormat_BGR() {
+    return static_cast<int>(ImageFormat::BGR);
   }
 
-  void Result_delete(void* result_ptr) {
-    zxing::Ref<zxing::Result>* ref = (zxing::Ref<zxing::Result>*)result_ptr;
-    delete ref;
+  int ImageFormat_RGBA() {
+    return static_cast<int>(ImageFormat::RGBA);
   }
 
-  int Result_getBarcodeFormat(void* ref_ptr) {
-    zxing::Ref<zxing::Result>* ref = (zxing::Ref<zxing::Result>*)ref_ptr;
-    return (*ref)->getBarcodeFormat();
+  int ImageFormat_BGRA() {
+    return static_cast<int>(ImageFormat::BGRA);
   }
 
-  void* Result_getText(void* ref_ptr) {
-    zxing::Ref<zxing::Result>* ref = (zxing::Ref<zxing::Result>*)ref_ptr;
-    zxing::Ref<zxing::String> string = (*ref)->getText();
-    return new zxing::Ref<zxing::String>(string);
+  // BarcodeFormat 枚举值
+  int BarcodeFormat_QRCode() {
+    return static_cast<int>(BarcodeFormat::QRCode);
   }
 
-  char const* BarcodeFormat_enum_to_string(zxing::BarcodeFormat format) {
-    return zxing::BarcodeFormat::barcodeFormatNames[format];
+  int BarcodeFormat_DataMatrix() {
+    return static_cast<int>(BarcodeFormat::DataMatrix);
   }
 
-  void String_delete(void* string_ptr) {
-    zxing::Ref<zxing::String>* ref = (zxing::Ref<zxing::String>*)string_ptr;
-    delete ref;
+  int BarcodeFormat_Aztec() {
+    return static_cast<int>(BarcodeFormat::Aztec);
   }
 
-  char const* String_string(void* string_ptr) {
-    zxing::Ref<zxing::String>* ref = (zxing::Ref<zxing::String>*)string_ptr;
-    return (*ref)->getText().c_str();
+  int BarcodeFormat_PDF417() {
+    return static_cast<int>(BarcodeFormat::PDF417);
   }
 
+  int BarcodeFormat_Code128() {
+    return static_cast<int>(BarcodeFormat::Code128);
+  }
+
+  int BarcodeFormat_Code39() {
+    return static_cast<int>(BarcodeFormat::Code39);
+  }
+
+  int BarcodeFormat_EAN13() {
+    return static_cast<int>(BarcodeFormat::EAN13);
+  }
+
+  int BarcodeFormat_EAN8() {
+    return static_cast<int>(BarcodeFormat::EAN8);
+  }
+
+  int BarcodeFormat_UPCA() {
+    return static_cast<int>(BarcodeFormat::UPCA);
+  }
+
+  int BarcodeFormat_UPCE() {
+    return static_cast<int>(BarcodeFormat::UPCE);
+  }
 }
 

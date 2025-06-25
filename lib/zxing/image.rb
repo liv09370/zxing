@@ -3,7 +3,7 @@ module ZXing; end
 module ZXing::Image
 
   def self.read *args
-    ZXing::RMagick::Image::read(*args)
+    ZXing::MiniMagick::Image::read(*args)
   end
 
   attr_reader :native

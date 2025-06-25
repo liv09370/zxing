@@ -38,11 +38,11 @@ Gem::Specification.new do |s|
   s.test_files = s.files.grep(%r{^test/})
   s.require_paths = ['lib', 'ext']
 
-  s.add_development_dependency 'bundler', '~> 1.6'
-  s.add_development_dependency 'rake', '~> 10.4'
-  s.add_development_dependency 'rake-compiler', '~> 0.9'
-  s.add_development_dependency 'shoulda', '~> 3.5'
+  s.add_development_dependency 'bundler', '>= 1.6'
+  s.add_development_dependency 'rake', '>= 10.4'
+  s.add_development_dependency 'rake-compiler', '>= 0.9'
+  s.add_development_dependency 'shoulda', '>= 3.5'
 
-  s.add_dependency 'ffi', '~> 1.1'
-  s.add_dependency 'rmagick', '~> 2.13'
+  s.add_dependency 'ffi', '>= 1.1'
+  s.add_dependency 'mini_magick', '>= 4.0'
 end

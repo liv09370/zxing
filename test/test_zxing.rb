@@ -1,7 +1,7 @@
 require File.expand_path( File.dirname(__FILE__) + '/test_helper')
 require 'zxing'
 
-class ZXingTest < MiniTest::Test
+class ZXingTest < Minitest::Test
   context "A QR decoder singleton" do
 
     class Foo < Struct.new(:v); def to_s; self.v; end; end

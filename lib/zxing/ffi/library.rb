@@ -1,102 +1,123 @@
+require 'ffi'
+
 module ZXing; end
 module ZXing::FFI; end
 
 module ZXing::FFI::Library
   extend ::FFI::Library
-  lib = File.join File.dirname(__FILE__), ".."
-  lib = File.expand_path lib
-  ffi_lib ::FFI::Library::LIBC, Dir[lib.to_s+"/zxing.{bundle,dylib,so,dll,sl}"][0]
+  
+  begin
+    lib = File.join File.dirname(__FILE__), "..", "..", "..", "ext"
+    lib = File.expand_path lib
+    ffi_lib ::FFI::Library::LIBC, Dir[lib.to_s+"/zxing/zxing.{bundle,dylib,so,dll,sl}"][0]
+  rescue LoadError
+    raise LoadError, "Could not load zxing.so. Please run 'rake compile' first."
+  end
 
+  # 基本内存管理
   attach_function 'free', [:pointer], :void
 
-  attach_function 'Reader_delete', [:pointer], :void
-  attach_function 'Reader_decode', [:pointer,
-                                    :pointer,
-                                    :pointer], :pointer
-  attach_function 'MultiFormatReader_new', [], :pointer
-  attach_function 'DataMatrixReader_new', [], :pointer
-  attach_function 'AztecReader_new', [], :pointer
-  attach_function 'Code39Reader_new', [:bool, :bool], :pointer
-  attach_function 'LuminanceSource_delete', [:pointer], :void
-  attach_function 'LuminanceSource_width', [:pointer], :int
-  attach_function 'LuminanceSource_height', [:pointer], :int
-  attach_function 'LuminanceSource_matrix', [:pointer], :pointer
-  attach_function 'GreyscaleLuminanceSource_new', [ :pointer,
-                                                    :int,
-                                                    :int,
-                                                    :int,
-                                                    :int,
-                                                    :int,
-                                                    :int
-                                                  ], :pointer
-  attach_function 'Binarizer_delete', [:pointer], :void
-  attach_function 'Binarizer_black_matrix', [:pointer], :pointer
-  attach_function 'HybridBinarizer_new', [:pointer], :pointer
-  attach_function 'BitMatrix_get', [:pointer, :int, :int], :bool
-  attach_function 'BinaryBitmap_new', [:pointer], :pointer
-  attach_function 'BinaryBitmap_count', [:pointer], :int
-  attach_function 'BinaryBitmap_delete', [:pointer], :void
-  attach_function 'BinaryBitmap_black_matrix', [:pointer], :pointer
-  attach_function 'DecodeHints_new', [:int], :pointer
-  attach_function 'DecodeHints_default', [], :pointer
-  attach_function 'DecodeHints_delete', [:pointer], :void
-  attach_function 'DecodeHints_setTryHarder', [:pointer, :bool], :void
-  attach_function 'DecodeHints_setDataMatrix', [:pointer, :bool], :void
-  attach_function 'Result_delete', [:pointer], :void
-  attach_function 'Result_getBarcodeFormat', [:pointer], :int
-  attach_function 'Result_getText', [:pointer], :pointer
-  attach_function 'BarcodeFormat_enum_to_string', [:int], :string
-  attach_function 'String_delete', [:pointer], :void
-  attach_function 'String_string', [:pointer], :string
+  # ImageFormat 枚举
+  enum :image_format, [
+    :lum, 0x01000000,
+    :rgba, 0x04000102,
+    :bgra, 0x04020100,
+    :rgb, 0x03000102,
+    :bgr, 0x03020100
+  ]
 
-  class ReaderPointer < FFI::AutoPointer
+  # BarcodeFormat 枚举
+  enum :barcode_format, [
+    :none, 0,
+    :aztec, 1,
+    :codabar, 2,
+    :code39, 4,
+    :code93, 8,
+    :code128, 16,
+    :datamatrix, 32,
+    :ean8, 64,
+    :ean13, 128,
+    :itf, 256,
+    :maxicode, 512,
+    :pdf417, 1024,
+    :qrcode, 2048,
+    :databar, 4096,
+    :databar_expanded, 8192,
+    :upca, 16384,
+    :upce, 32768,
+    :micro_qrcode, 65536,
+    :rmqr_code, 131072,
+    :dx_film_edge, 262144
+  ]
+
+  # 核心解码函数
+  attach_function :decode_barcode, [
+    :pointer,    # data
+    :int,        # width
+    :int,        # height
+    :image_format, # format
+    :bool,       # tryHarder
+    :bool,       # tryRotate
+    :bool        # tryInvert
+  ], :pointer
+
+  attach_function :decode_barcodes, [
+    :pointer,    # data
+    :int,        # width
+    :int,        # height
+    :image_format, # format
+    :bool,       # tryHarder
+    :bool,       # tryRotate
+    :bool        # tryInvert
+  ], :pointer
+
+  # Barcode 结果处理
+  attach_function :Barcode_delete, [:pointer], :void
+  attach_function :Barcode_isValid, [:pointer], :bool
+  attach_function :Barcode_format, [:pointer], :int
+  attach_function :Barcode_text, [:pointer], :string
+  attach_function :Barcode_formatName, [:pointer], :string
+  attach_function :Barcode_error, [:pointer], :string
+
+  # Barcodes 集合处理
+  attach_function :Barcodes_delete, [:pointer], :void
+  attach_function :Barcodes_size, [:pointer], :int
+  attach_function :Barcodes_at, [:pointer, :int], :pointer
+
+  # 内存管理
+  attach_function :free_string, [:string], :void
+
+  # ImageFormat 枚举值获取
+  attach_function :ImageFormat_Lum, [], :int
+  attach_function :ImageFormat_RGB, [], :int
+  attach_function :ImageFormat_BGR, [], :int
+  attach_function :ImageFormat_RGBA, [], :int
+  attach_function :ImageFormat_BGRA, [], :int
+
+  # BarcodeFormat 枚举值获取
+  attach_function :BarcodeFormat_QRCode, [], :int
+  attach_function :BarcodeFormat_DataMatrix, [], :int
+  attach_function :BarcodeFormat_Aztec, [], :int
+  attach_function :BarcodeFormat_PDF417, [], :int
+  attach_function :BarcodeFormat_Code128, [], :int
+  attach_function :BarcodeFormat_Code39, [], :int
+  attach_function :BarcodeFormat_EAN13, [], :int
+  attach_function :BarcodeFormat_EAN8, [], :int
+  attach_function :BarcodeFormat_UPCA, [], :int
+  attach_function :BarcodeFormat_UPCE, [], :int
+
+  # 自动指针类用于内存管理
+  class BarcodePointer < FFI::AutoPointer
     def self.release ptr
-      ZXing::FFI::Library::Reader_delete ptr
+      ZXing::FFI::Library::Barcode_delete ptr unless ptr.null?
     end
   end
 
-  class ResultPointer < FFI::AutoPointer
+  class BarcodesPointer < FFI::AutoPointer
     def self.release ptr
-      ZXing::FFI::Library::Result_delete ptr
+      ZXing::FFI::Library::Barcodes_delete ptr unless ptr.null?
     end
   end
-
-  class LuminanceSourcePointer < FFI::AutoPointer
-    def self.release ptr
-      ZXing::FFI::Library::LuminanceSource_delete ptr
-    end
-  end
-
-  class BinarizerPointer < FFI::AutoPointer
-    def self.release ptr
-      ZXing::FFI::Library::Binarizer_delete ptr
-    end
-  end
-
-  class BinaryBitmapPointer < FFI::AutoPointer
-    def self.release ptr
-      ZXing::FFI::Library::BinaryBitmap_delete ptr
-    end
-  end
-
-  class DecodeHintsPointer < FFI::AutoPointer
-    def self.release ptr
-      ZXing::FFI::Library::DecodeHints_delete ptr
-    end
-  end
-
-  class StringPointer < FFI::AutoPointer
-    def self.release ptr
-      ZXing::FFI::Library::String_delete ptr
-    end
-  end
-
-  class BitMatrixPointer < FFI::AutoPointer
-    def self.release ptr
-      ZXing::FFI::Library::BitMatrix_delete ptr
-    end
-  end
-
 end
 
 

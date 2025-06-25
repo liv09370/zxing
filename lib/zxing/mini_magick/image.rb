@@ -5,7 +5,19 @@ module ZXing::MiniMagick; end
 
 class ZXing::MiniMagick::Image
   include ZXing::Image
-  LuminanceSource = ZXing::FFI::Common::GreyscaleLuminanceSource
+
+  # 内部 LuminanceSource 类
+  class LuminanceSource < ZXing::FFI::Common::GreyscaleLuminanceSource
+    def initialize(image)
+      # 从 MiniMagick 图像提取灰度数据
+      gray_data = image.gray
+      width = image.width
+      height = image.height
+      
+      # 调用父类构造函数
+      super(gray_data, width, height)
+    end
+  end
 
   def self.read argument
     img = nil
@@ -82,10 +94,12 @@ class ZXing::MiniMagick::Image
     gray_img.depth(8)
     
     # Use PGM format to get raw pixel data - this is more reliable
-    temp_file = Tempfile.new(['gray_pixels', '.pgm'])
-    temp_file.close
+    temp_file = nil
     
     begin
+      temp_file = Tempfile.new(['gray_pixels', '.pgm'])
+      temp_file.close
+      
       # Export as PGM (Portable GrayMap) format
       gray_img.format('pgm')
       gray_img.write(temp_file.path)
@@ -125,7 +139,11 @@ class ZXing::MiniMagick::Image
       # Fallback: return zero-filled data if anything goes wrong
       return "\x00" * (img_width * img_height)
     ensure
-      temp_file.unlink if File.exist?(temp_file.path)
+      # 确保清理临时文件
+      if temp_file
+        temp_file.unlink rescue nil
+        temp_file.close rescue nil
+      end
     end
   end
 
