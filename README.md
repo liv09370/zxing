@@ -29,8 +29,6 @@ gem specific_install https://github.com/liv09370/zxing.git
 gem 'zxing_cpp', git: 'https://github.com/liv09370/zxing.git'
 ```
 
-> ✨ **自动子模块初始化**: v0.3.0 新增了自动子模块检查和初始化功能，无需手动处理子模块！
-
 ## 📖 快速开始
 
 ```ruby
@@ -138,9 +136,8 @@ end
 ## 🛠️ 开发
 
 ```bash
-git clone --recursive https://github.com/liv09370/zxing.git
+git clone https://github.com/liv09370/zxing.git
 cd zxing
-git submodule update --init --recursive
 bundle install
 bundle exec rake compile
 bundle exec ruby test/test_zxing.rb
@@ -150,13 +147,10 @@ bundle exec ruby test/test_zxing.rb
 
 查看 [安装指南](README_安装指南.md) 了解详细的故障排除步骤。
 
-**⚠️ 重要**: 如果遇到找不到 zxing-cpp 源文件的错误，请查看 [子模块说明](SUBMODULES.md)。
-
 常见问题：
 - ImageMagick 版本问题
 - 编译依赖缺失  
 - 权限配置问题
-- zxing-cpp 子模块未初始化
 
 ## 📞 支持
 
