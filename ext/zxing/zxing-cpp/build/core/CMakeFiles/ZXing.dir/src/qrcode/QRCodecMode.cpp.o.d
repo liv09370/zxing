@@ -1,0 +1,9 @@
+core/CMakeFiles/ZXing.dir/src/qrcode/QRCodecMode.cpp.o: \
+ /home/sanyu/source/zxing_cpp.rb/ext/zxing/zxing-cpp/core/src/qrcode/QRCodecMode.cpp \
+ /usr/include/stdc-predef.h \
+ /home/sanyu/source/zxing_cpp.rb/ext/zxing/zxing-cpp/core/src/qrcode/QRCodecMode.h \
+ /home/sanyu/source/zxing_cpp.rb/ext/zxing/zxing-cpp/core/src/qrcode/QRVersion.h \
+ /home/sanyu/source/zxing_cpp.rb/ext/zxing/zxing-cpp/core/src/qrcode/QRECB.h \
+ /usr/include/c++/14/array \
+ /home/sanyu/source/zxing_cpp.rb/ext/zxing/zxing-cpp/core/src/qrcode/QRErrorCorrectionLevel.h \
+ /usr/include/c++/14/initializer_list /usr/include/c++/14/vector
