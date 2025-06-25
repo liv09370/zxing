@@ -29,6 +29,8 @@ gem specific_install https://github.com/liv09370/zxing.git
 gem 'zxing_cpp', git: 'https://github.com/liv09370/zxing.git'
 ```
 
+> ✨ **自动子模块初始化**: v0.3.0 新增了自动子模块检查和初始化功能，无需手动处理子模块！
+
 ## 📖 快速开始
 
 ```ruby
