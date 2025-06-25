@@ -11,3 +11,10 @@
 /*.png
 /*.jpg
 *.o
+
+# Build directories and artifacts
+ext/zxing/zxing-cpp/build/
+ext/zxing/Makefile
+ext/zxing/*.o
+ext/zxing/*.so
+ext/zxing/*.bundle

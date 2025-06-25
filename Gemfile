@@ -1,3 +1,3 @@
-source "https://rubygems.org"
+source 'https://rubygems.org'
 
-gemspec
+gem 'zxing_cpp', git: 'https://github.com/liv09370/zxing.git'
