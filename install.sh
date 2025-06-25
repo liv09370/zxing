@@ -81,6 +81,8 @@ install_gem() {
     # 安装 zxing-cpp
     echo "   从 GitHub 安装 zxing-cpp..."
     gem specific_install https://github.com/liv09370/zxing.git
+    
+    echo "   注意：如果手动构建，请记得使用 --recursive 标志克隆仓库"
 }
 
 # 验证安装

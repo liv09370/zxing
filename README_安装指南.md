@@ -6,6 +6,8 @@
 
 ### 🚀 快速安装
 
+> **重要提示**: 本项目使用 Git 子模块包含 zxing-cpp 源代码。使用 `gem specific_install` 会自动处理，但手动克隆时需要使用 `--recursive` 标志。
+
 #### 方法1：从 GitHub 直接安装（推荐）
 
 ```bash
@@ -30,9 +32,12 @@ bundle install
 #### 方法3：手动构建安装
 
 ```bash
-# 克隆仓库
-git clone https://github.com/liv09370/zxing.git
+# 克隆仓库（包含子模块）
+git clone --recursive https://github.com/liv09370/zxing.git
 cd zxing
+
+# 如果已经克隆，更新子模块
+git submodule update --init --recursive
 
 # 安装依赖
 bundle install
